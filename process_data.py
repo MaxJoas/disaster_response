@@ -82,13 +82,14 @@ def save_data(df, database_filename):
     Args:
         df (pd.DataFrame): cleaned pandas dataframe
         database_filename (str): name of database
+        table_name (str): name of the SQL table
     Returns:
         None
 
     """
     path = 'sqlite:///' + str(database_filename)
     engine = create_engine(path)
-    df.to_sql(database_filename, engine, index=False)
+    df.to_sql(name='mytable', con=engine, index=False)
 
 
 def main():
