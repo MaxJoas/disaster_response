@@ -1,0 +1,2 @@
+2. three different multiclass estimator with custom feature tuning
+3. Doc String for custom classes
