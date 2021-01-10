@@ -12,13 +12,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.metrics import f1_score, recall_score, precision_score
 from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.neural_network import MLPClassifier
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sqlalchemy import create_engine
-from sklearn.base import BaseEstimator, TransformerMixin
-from disaster.models.starting_word import StartingVerbExtractor, PosFrequency
+from disaster.models.starting_word import *
+from collections import defaultdict
 
-# from starting_word import StartingVerbExtractor
 
 nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
 nltk.download('stopwords')
@@ -38,6 +38,8 @@ def load_data(database_filepath):
 
     """
     # create db connection
+    # path = 'sqlite:///' + './disaster/data/test.db'
+
     path = 'sqlite:///' + database_filepath
     engine = create_engine(path)
     # read sql into pandas dataframe
@@ -46,8 +48,8 @@ def load_data(database_filepath):
     # get explanatory and target variables as pandas dataframe / Series
     X = df['message']
     y = df.drop(columns=['id', 'message', 'genre'])
-    # X = X[0:40]
-    # y = y.iloc[0:40, :]
+    # X = X[0:50]
+    # y = y.iloc[0:50, :]
     category_names = list(y.columns)
 
     return X, y, category_names
@@ -108,28 +110,25 @@ def build_model():
                 ('tfidf', TfidfTransformer())
             ])),
 
-            # ('starting_verb', StartingVerbExtractor()),
+            ('starting_verb', StartingVerbExtractor()),
             # ('pos_frequency', PosFrequency())
         ])),
 
-        ('clf', MultiOutputClassifier(RandomForestClassifier()))
+        # ('clf', MultiOutputClassifier(RandomForestClassifier(random_state=42)))
+        ('clf', MultiOutputClassifier(MLPClassifier(random_state=42)))
+
     ])
 
     # define tuning parametes for grid search, syntax can be explained as
     # follows: chained names of step in pipeline separated with two underscores
     # followed by actual parameter name of the step
+
     parameters = {
-        # 'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
-        # 'features__text_pipeline__vect__max_df': (0.5, 0.75, 1.0),
-        # 'features__text_pipeline__vect__max_features': (None, 5000, 10000),
-        # 'features__text_pipeline__tfidf__use_idf': (True, False),
-        'clf__estimator__n_estimators': [50, 100, 200],
-        # 'clf__estimator__min_samples_split': [2, 3, 4],
-        # 'features__transformer_weights': (
-        #     {'text_pipeline': 1, 'starting_verb': 0.5},
-        #     {'text_pipeline': 0.5, 'starting_verb': 1},
-        #     {'text_pipeline': 0.8, 'starting_verb': 1},
-        # )
+        'clf__estimator__hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
+        'clf__estimator__activation': ['tanh', 'relu'],
+        'clf__estimator__solver': ['sgd', 'adam'],
+        'clf__estimator__alpha': [0.0001, 0.05],
+        'clf__estimator__learning_rate': ['constant', 'adaptive'],
     }
     # instantiating Grid Search
     cv = GridSearchCV(pipeline, param_grid=parameters,
@@ -139,7 +138,8 @@ def build_model():
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    """evaluates a supervised classification model with a confusion matrix
+    """evaluates a supervised classification model with recall, precision and
+    f1_score.
 
     Args:
         model (obj): fitted supervised classification model
@@ -150,24 +150,44 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
     """
     best_model = model.best_estimator_  # get best model
+    # print best estimator
+    print('The best model has this parameter: {}'.format(model.best_params_))
     y_preds = best_model.predict(X_test)  # predicts message categories
-    y_preds_t = y_preds.T
+    pd.DataFrame(y_preds).to_csv('predictions.csv')
+    Y_test.to_csv('true_categories.csv')
+
+    # In order to evaluate the model I break the multiclass problem down
+    # into a single class problem by comparing each category separately
+    y_preds_t = y_preds.T  # transform to better compare each category
     Y_test_array = Y_test.to_numpy()
     Y_test_array = Y_test_array.T
-    print('prediction shape')
-    print(y_preds_t.shape)
-    print('test shape')
-    print(Y_test_array.shape)
-    for i in range(len(category_names)):
-        print(category_names[i])
-        print('recall')
-        print(recall_score(y_true=Y_test_array[i], y_pred=y_preds_t[i]))
-        print('precision_score')
-        print(precision_score(y_true=Y_test_array[i], y_pred=y_preds_t[i]))
-        print('f1')
-        print(f1_score(y_true=Y_test_array[i], y_pred=y_preds_t[i]))
 
-    # labels=category_names)
+    # I will save the recall, py arrprecision and f1_score for each category in
+    # dictionary, whereby the metrics will be the keys
+    helper = defaultdict(list)
+    for i in range(len(category_names)):
+        recall = recall_score(y_true=Y_test_array[i],
+                              y_pred=y_preds_t[i],
+                              average='micro')
+        helper['recall'].append(recall)
+
+        precision = precision_score(y_true=Y_test_array[i],
+                                    y_pred=y_preds_t[i],
+                                    average='micro')
+        helper['precision'].append(precision)
+
+        f1 = f1_score(y_true=Y_test_array[i],
+                      y_pred=y_preds_t[i],
+                      average='micro')
+        helper['f1'].append(f1)
+
+        print('The category {} has a recall of: {}, a precision of: {} and \
+              a f1_score of {}'.format(category_names[i], recall, precision, f1))
+
+    res = pd.DataFrame(helper)
+    res.index = category_names
+    res.to_csv(path_or_buf='metrics.cav')
+    print(res)
 
 
 def save_model(model, model_filepath):
@@ -196,7 +216,7 @@ def main():
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
         X, Y, category_names = load_data(database_filepath)
         X_train, X_test, Y_train, Y_test = train_test_split(
-            X, Y, test_size=0.2)
+            X, Y, test_size=0.2, random_state=42)
 
         print('Building model...')
         model = build_model()

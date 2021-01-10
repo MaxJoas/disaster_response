@@ -1,2 +1,3 @@
-2. three different multiclass estimator with custom feature tuning
-3. Doc String for custom classes
+1. run with whole dataset and full tuning
+2. remove outcommented code
+3. webabb
