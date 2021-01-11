@@ -110,12 +110,13 @@ def build_model():
                 ('tfidf', TfidfTransformer())
             ])),
 
-            ('starting_verb', StartingVerbExtractor()),
+            # ('starting_verb', StartingVerbExtractor()),
             # ('pos_frequency', PosFrequency())
         ])),
 
         # ('clf', MultiOutputClassifier(RandomForestClassifier(random_state=42)))
-        ('clf', MultiOutputClassifier(MLPClassifier(random_state=42)))
+        ('clf', MultiOutputClassifier(MLPClassifier(random_state=42,
+                                                    max_iter=500)))
 
     ])
 
@@ -124,15 +125,14 @@ def build_model():
     # followed by actual parameter name of the step
 
     parameters = {
-        'clf__estimator__hidden_layer_sizes': [(50, 50, 50), (50, 100, 50), (100,)],
+        'clf__estimator__hidden_layer_sizes': [(50, 50, 50), (100,)],
         'clf__estimator__activation': ['tanh', 'relu'],
-        'clf__estimator__solver': ['sgd', 'adam'],
         'clf__estimator__alpha': [0.0001, 0.05],
         'clf__estimator__learning_rate': ['constant', 'adaptive'],
     }
     # instantiating Grid Search
     cv = GridSearchCV(pipeline, param_grid=parameters,
-                      cv=2, verbose=1)
+                      cv=3, verbose=1)
 
     return cv
 
