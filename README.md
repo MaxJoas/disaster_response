@@ -41,12 +41,13 @@ The following libraries have been used:
 *  pickleshare==0.7.5
 
 ### File Structure
-*  ` setup.py` Used to install the package\
+*  `setup.py` Used to install the package\
 *  `main.sh` Wrapper script to run the whole pipeline\
 *  The `disaster` directory contains all files and folder for the package\
 *  The `disaster/data` directory contains the input data file `disaster_messages.csv` and `disaster_categories.csv` as well as a script to clean `process_data.py` the data and prepare the data for plotting `prepare_plotting.py`. The cleaned data will be also stored here as `disaster.db`\
 * The `disaster/models` directory contains `train_model.py` to train the model as well as the trained model as `disaster_model.pkl`\
-* The `disaster/app` directory contains the starting point for the Flask app `run.py`. Inside this directory are the `templates` and `static` directories containing `master.html` and `go.html` for the Web App and `styles.css` for the custom styling of the Web App
+* The `disaster/app` directory contains the starting point for the Flask app `run.py`. Inside this directory are the `templates` and `static` directories containing `master.html` and `go.html` for the Web App and `styles.css` for the custom styling of the Web App.
+* The `results` folder contains metrics for the prediction.
 
 ### Acknowledgements
 Udacity provided a Basic Structure for the Flask Web App. However I made a lot of changes to have a more state of the art design.
