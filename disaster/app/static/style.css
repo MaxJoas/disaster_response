@@ -1,3 +1,43 @@
+
+@import url('https://fonts.googleapis.com/css?family=VT323');
+
+$color: #284cff;
+
+.list-group-item {
+background-color: transparent;
+border-top: 1px solid #ddd;
+border-radius: 0;
+color: #fff;
+}
+
+button {
+  flex: 1;
+  padding: 25px 50px;
+  margin: 25px;
+  border-radius: 999px;
+  border: 5px solid $color;
+  font-family: 'VT323', monospace;
+  font-size: 25px;
+  text-shadow: 0 3px 5px rgba(#000, 0.25);
+  white-space: nowrap;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  background-image: url(https://web.archive.org/web/20160312084140im_/http://splatoon.nintendo.com/assets/img/nav-bg-fill-blue.png?1443460871);
+  background-repeat: repeat-x;
+  background-position: 0 -100%;
+  transition: 1.5s ease;
+  &:hover {
+    background-position: 500% 100%;
+  }
+  @for $i from 1 through 18 {
+    &:nth-child(#{$i}) {
+      filter: hue-rotate(($i * 20) + deg);
+    }
+  }
+}
+
 header {
   position: relative;
   height: 200px;
@@ -30,7 +70,7 @@ body {
   /* background-image: linear-gradient(11deg, #ee9ca7, #ffdde1); */
   background-image: linear-gradient(11deg, #be93c5, #7bc6cc);
 
-  height: 1000px;
+  height: 1300px;
   }
 
 .content {

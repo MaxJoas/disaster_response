@@ -1,68 +1,73 @@
 import json
-import plotly
-import pandas as pd
-
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
-
-from flask import Flask
-from flask import render_template, request, jsonify
-from plotly.graph_objs import Bar
-# from sklearn.externals import joblib # https://stackoverflow.com/questions/61893719/importerror-cannot-import-name-joblib-from-sklearn-externals
 import joblib
+import numpy as np
+import pandas as pd
+import plotly
+from flask import Flask, jsonify, render_template, request
+from plotly.graph_objs import Bar
 from sqlalchemy import create_engine
 
+from disaster.models.train_classifier import tokenize
 
 app = Flask(__name__, static_url_path='/static')
 
-
-def tokenize(text):
-    tokens = word_tokenize(text)
-    lemmatizer = WordNetLemmatizer()
-
-    clean_tokens = []
-    for tok in tokens:
-        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
-        clean_tokens.append(clean_tok)
-
-    return clean_tokens
-
-
 # load data
-engine = create_engine('sqlite:///disaster/data/test.db')
+engine = create_engine('sqlite:///disaster/data/disaster.db')
 df = pd.read_sql_table('mytable', engine)
+plotting_helper = pd.read_csv('disaster/data/plotting_df.csv')
 
 # load model
-model = joblib.load("disaster/data/small.pkl")
+model = joblib.load("disaster/models/disaster_model.pkl")
 
 # index webpage displays cool visuals and receives user input text for model
 @app.route('/')
 @app.route('/index')
 def index():
-    # number_lines = df.shape[0]
     # extract data needed for visuals
-    # TODO: Below is an example - modify to extract data for your own visuals
-    genre_counts = df.groupby('genre').count()['message']
-    genre_names = list(genre_counts.index)
+    categories_df = df.drop(
+        columns=['id', 'message', 'genre'])
+    # define variable for plotting
+    categories_counts = plotting_helper['categories_counts']
+    categories_names = list(categories_df.columns)
+    categories_names = [name.replace("_", " ") for name in categories_names]
 
     # create visuals
-    # TODO: Below is an example - modify to create your own visuals
     graphs = [
         {
             'data': [
                 Bar(
-                    x=genre_names,
-                    y=genre_counts
+                    x=categories_names,
+                    y=categories_counts
                 )
             ],
 
             'layout': {
-                'title': 'Distribution of Message Genres',
+                'title': 'Distribution of Message Categories',
                 'yaxis': {
                     'title': "Count"
                 },
                 'xaxis': {
-                    'title': "Genre"
+                    'title': "Message Category"
+                },
+                'paper_bgcolor': 'rgba(0,0,0,0)',
+                'plot_bgcolor': 'rgba(0,0,0,0)'
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x=categories_names,
+                    y=plotting_helper['av_word_frequency']
+                )
+            ],
+
+            'layout': {
+                'title': 'Average Word Frequency per Category',
+                'yaxis': {
+                    'title': "Mean Word Frequency"
+                },
+                'xaxis': {
+                    'title': "Message Category"
                 },
                 'paper_bgcolor': 'rgba(0,0,0,0)',
                 'plot_bgcolor': 'rgba(0,0,0,0)'
@@ -94,9 +99,5 @@ def go():
     )
 
 
-def main():
-    app.run(host='0.0.0.0', port=3002, debug=True)
-
-
 if __name__ == '__main__':
-    main()
+    app.run(host='0.0.0.0', port=3001, debug=True)

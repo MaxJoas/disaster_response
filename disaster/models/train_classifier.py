@@ -1,7 +1,8 @@
-from nltk.tokenize import sent_tokenize
+# import dill as pickle
 import pickle
 import re
 import sys
+from collections import defaultdict
 
 import nltk
 import pandas as pd
@@ -10,15 +11,12 @@ from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import sent_tokenize, word_tokenize
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from sklearn.metrics import f1_score, recall_score, precision_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.neural_network import MLPClassifier
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sqlalchemy import create_engine
-from disaster.models.starting_word import *
-from collections import defaultdict
-
 
 nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
 nltk.download('stopwords')
@@ -38,8 +36,6 @@ def load_data(database_filepath):
 
     """
     # create db connection
-    # path = 'sqlite:///' + './disaster/data/test.db'
-
     path = 'sqlite:///' + database_filepath
     engine = create_engine(path)
     # read sql into pandas dataframe
@@ -48,8 +44,6 @@ def load_data(database_filepath):
     # get explanatory and target variables as pandas dataframe / Series
     X = df['message']
     y = df.drop(columns=['id', 'message', 'genre'])
-    # X = X[0:50]
-    # y = y.iloc[0:50, :]
     category_names = list(y.columns)
 
     return X, y, category_names
@@ -110,29 +104,23 @@ def build_model():
                 ('tfidf', TfidfTransformer())
             ])),
 
-            # ('starting_verb', StartingVerbExtractor()),
-            # ('pos_frequency', PosFrequency())
+            #('starting_verb', StartingVerbExtractor()),
         ])),
 
-        # ('clf', MultiOutputClassifier(RandomForestClassifier(random_state=42)))
         ('clf', MultiOutputClassifier(MLPClassifier(random_state=42,
                                                     max_iter=500)))
-
     ])
 
     # define tuning parametes for grid search, syntax can be explained as
     # follows: chained names of step in pipeline separated with two underscores
     # followed by actual parameter name of the step
-
     parameters = {
         'clf__estimator__hidden_layer_sizes': [(50, 50, 50), (100,)],
-        'clf__estimator__activation': ['tanh', 'relu'],
-        'clf__estimator__alpha': [0.0001, 0.05],
         'clf__estimator__learning_rate': ['constant', 'adaptive'],
     }
     # instantiating Grid Search
     cv = GridSearchCV(pipeline, param_grid=parameters,
-                      cv=3, verbose=1)
+                      cv=2, verbose=2, n_jobs=6)
 
     return cv
 
@@ -186,7 +174,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
     res = pd.DataFrame(helper)
     res.index = category_names
-    res.to_csv(path_or_buf='metrics.cav')
+    res.to_csv(path_or_buf='metrics.csv')
     print(res)
 
 
@@ -205,7 +193,7 @@ def save_model(model, model_filepath):
         pickle.dump(file=f, obj=model)
 
 
-def main():
+if __name__ == '__main__':
     """ Reads in the databasel filepath and the filepath where the final
     model will be stored via commandline arguments. Calls functions for
     loading the data and training and evaluating the ML model
@@ -237,7 +225,3 @@ def main():
               'as the first argument and the filepath of the pickle file to '
               'save the model to as the second argument. \n\nExample: python '
               'train_classifier.py ../data/DisasterResponse.db classifier.pkl')
-
-
-if __name__ == '__main__':
-    main()

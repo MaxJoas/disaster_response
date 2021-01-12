@@ -1,5 +1,6 @@
 import sys
 import pandas as pd
+import numpy as np
 
 from sqlalchemy import create_engine
 
@@ -48,6 +49,12 @@ def clean_data(df):
     for col in new_col_names:
         cat_col[col] = cat_col[col].apply(extract_binary)
 
+    # We only 0 or 1 to encode whether a message belongs to a category
+    # Explorative data analys showed that the request category is 188 times
+    # encoded as 2, so I want to drop these observations
+
+    # first replace the 2 with na then we drop the na rows later
+    cat_col.replace(to_replace=2, value=np.nan, inplace=True)
     # concatenate the new cols to the df and drop the old categories col
     df = pd.concat([df, cat_col], axis=1)
     df.drop(columns=['categories'], inplace=True)

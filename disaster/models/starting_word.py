@@ -2,7 +2,7 @@ import pandas as pd
 import nltk
 from sklearn.base import BaseEstimator, TransformerMixin
 from nltk.tokenize import sent_tokenize
-from disaster.models.train_classifier import tokenize
+from disaster.models.train_classifier import *
 
 
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
